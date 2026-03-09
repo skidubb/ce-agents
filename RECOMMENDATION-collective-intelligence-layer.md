@@ -1,4 +1,4 @@
-# Recommendation: Collective Intelligence Layer
+# Recommendation: ACI (Artificial Collective Intelligence) Layer
 
 **Status:** Draft for CPO/CTO Review
 **Date:** 2026-03-09
@@ -8,7 +8,9 @@
 
 ## Executive Summary
 
-CE-AGENTS is currently structured as a collection of independent protocol implementations (Walk, Debate, Review Board, AAR, etc.) across three repositories. This recommendation proposes elevating **Collective Intelligence** to a first-class architectural concept — a shared horizontal layer that sits above individual protocols and below evaluation/reporting.
+CE-AGENTS is currently structured as a collection of independent protocol implementations (Walk, Debate, Review Board, AAR, etc.) across two product repositories (CE-Evals, coordination-lab). This recommendation proposes elevating **Artificial Collective Intelligence (ACI)** to a first-class architectural concept — a shared horizontal layer that sits above individual protocols and below evaluation/reporting.
+
+> **Note:** We use the term "ACI" rather than "CI" to avoid confusion with CI/CD (Continuous Integration / Continuous Deployment).
 
 The core reframe: CE-AGENTS is not a protocol library. It is a **collective cognition system with multiple protocol modes**.
 
@@ -26,7 +28,7 @@ Today each protocol is its own closed universe:
 
 But nothing connects them into a learning whole. There is no shared instrumentation, no cross-protocol memory, no system-level understanding of which agents, pairings, or protocols actually produce value.
 
-Without a collective intelligence layer, scaling to more protocols just means more parallel outputs — not more intelligent outputs.
+Without an ACI layer, scaling to more protocols just means more parallel outputs — not more intelligent outputs.
 
 ## The Standard
 
@@ -69,7 +71,7 @@ This is not a rigid taxonomy — protocols can contribute to multiple functions.
 Every protocol spec gains a new required section:
 
 ```
-## Collective Intelligence Contribution
+## ACI Contribution
 
 - **Primary contribution:** [which dimension this protocol improves]
 - **Secondary contribution:** [additional value]
@@ -143,7 +145,7 @@ Every protocol, regardless of family, should be evaluated on:
 
 ### Option A: Lightweight — Spec and Eval Changes Only
 
-**What:** Add the CI section to protocol specs and extend the eval rubric. No new runtime infrastructure.
+**What:** Add the ACI section to protocol specs and extend the eval rubric. No new runtime infrastructure.
 
 - Lowest effort, fastest to ship
 - Forces design discipline immediately
@@ -180,7 +182,7 @@ If CE-AGENTS does this well, the moat is not "we have N protocols."
 
 The moat is:
 
-> **We have an instrumented collective intelligence engine that knows how to compose, critique, learn, and adapt across protocols.**
+> **We have an instrumented ACI engine that knows how to compose, critique, learn, and adapt across protocols.**
 
 That shifts the competitive position from "protocol library" to "learning collective" — a fundamentally different product category.
 
@@ -194,20 +196,33 @@ That shifts the competitive position from "protocol library" to "learning collec
 
 3. **Protocol classification** — Should protocols be formally classified by collective function (Exploration, Adjudication, Coordination, Learning)?
 
-4. **Spec requirements** — Should the Collective Intelligence Contribution section become mandatory for all protocol specs?
+4. **Spec requirements** — Should the ACI Contribution section become mandatory for all protocol specs?
 
 5. **Eval extension** — Should collective performance metrics be added to CE-Evals alongside answer quality metrics?
+
+6. **Scope** — Should ACI apply only to product protocols (CE-Evals, coordination-lab), or also to internal operational agents (ce-c-suite)?
 
 ---
 
 ## Appendix: Impact on Existing Repos
 
+### Product repos (in scope)
+
 | Repository | Impact |
 |-----------|--------|
-| **ce-c-suite** | Agent definitions gain CI metadata (what collective function each agent serves, what telemetry it emits) |
-| **CE-Evals** | Eval rubrics extended with collective performance dimensions; new scoring categories |
-| **coordination-lab** | Protocol specs gain CI section; protocols classified by collective function; telemetry schema defined |
-| **ce-agents (monorepo)** | CI layer becomes a shared module; telemetry storage and reporting live here |
+| **CE-Evals** | Eval rubrics extended with ACI performance dimensions; new scoring categories |
+| **coordination-lab** | Protocol specs gain ACI section; protocols classified by collective function; telemetry schema defined |
+| **ce-agents (monorepo)** | ACI layer becomes a shared module; telemetry storage and reporting live here |
+
+### Operational repo (out of scope by default)
+
+| Repository | Notes |
+|-----------|-------|
+| **ce-c-suite** | Internal company operations tool, not part of the product. Could optionally benefit from ACI instrumentation if CPO/CTO decide multiagent operational workflows should also participate in collective learning. Separate decision. |
+
+### Monorepo status
+
+The ce-agents monorepo is currently a skeleton (README + gitignore). The folder structure described in the README does not yet exist — sub-projects have not been integrated. This is the right moment to introduce ACI as a foundational layer before integration happens.
 
 ---
 
