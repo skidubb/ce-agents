@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CE-AGENTS — Interactive Project Diagram</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+  :root{
+    --bg:#0b0e17;
+    --surface:#141824;
+    --surface-hover:#1c2235;
+    --border:#2a3150;
+    --text:#e2e8f0;
+    --text-muted:#8892b0;
+    --accent:#6c63ff;
+    --accent-glow:rgba(108,99,255,.35);
+    --green:#10b981;
+    --amber:#f59e0b;
+    --rose:#f43f5e;
+    --cyan:#22d3ee;
+    --pink:#ec4899;
+    --orange:#f97316;
+    --blue:#3b82f6;
+  }
+
+  body{
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+
+  /* ---------- header ---------- */
+  header{
+    text-align:center;
+    padding:2.5rem 1rem 1rem;
+  }
+  header h1{
+    font-size:2rem;
+    letter-spacing:.04em;
+    background:linear-gradient(135deg,var(--accent),var(--cyan));
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+  }
+  header p{
+    color:var(--text-muted);
+    margin-top:.4rem;
+    font-size:.95rem;
+  }
+
+  /* ---------- canvas area ---------- */
+  #canvas{
+    position:relative;
+    width:100%;
+    max-width:1100px;
+    height:700px;
+    margin:1.5rem auto 2rem;
+  }
+
+  /* ---------- SVG lines ---------- */
+  #lines{
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    z-index:0;
+  }
+  #lines line{
+    stroke:var(--border);
+    stroke-width:2;
+    stroke-dasharray:6 4;
+    transition:stroke .3s, stroke-width .3s;
+  }
+  #lines line.active{
+    stroke:var(--accent);
+    stroke-width:3;
+    stroke-dasharray:none;
+  }
+
+  /* ---------- nodes ---------- */
+  .node{
+    position:absolute;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:1rem 1.2rem;
+    cursor:pointer;
+    transition:transform .25s,box-shadow .25s,border-color .25s;
+    z-index:1;
+    user-select:none;
+  }
+  .node:hover{
+    transform:translateY(-3px);
+    box-shadow:0 8px 30px rgba(0,0,0,.4);
+    border-color:var(--accent);
+  }
+  .node.expanded{
+    border-color:var(--accent);
+    box-shadow:0 0 20px var(--accent-glow);
+    z-index:10;
+  }
+  .node-icon{
+    font-size:1.6rem;
+    margin-bottom:.35rem;
+  }
+  .node-title{
+    font-weight:700;
+    font-size:1rem;
+    white-space:nowrap;
+  }
+  .node-sub{
+    font-size:.78rem;
+    color:var(--text-muted);
+    margin-top:.15rem;
+  }
+  .node-badge{
+    display:inline-block;
+    font-size:.65rem;
+    padding:2px 7px;
+    border-radius:999px;
+    margin-top:.45rem;
+    font-weight:600;
+    letter-spacing:.03em;
+  }
+
+  /* ---------- center hub ---------- */
+  #hub{
+    width:180px;
+    text-align:center;
+    background:linear-gradient(145deg,#1a1f35,#141824);
+    border:2px solid var(--accent);
+    box-shadow:0 0 40px var(--accent-glow);
+  }
+  #hub .node-title{font-size:1.15rem;}
+
+  /* ---------- detail panel ---------- */
+  #detail{
+    position:fixed;
+    top:0;right:-420px;
+    width:400px;height:100vh;
+    background:var(--surface);
+    border-left:1px solid var(--border);
+    z-index:100;
+    transition:right .35s cubic-bezier(.4,0,.2,1);
+    overflow-y:auto;
+    padding:2rem 1.6rem;
+  }
+  #detail.open{right:0}
+  #detail-close{
+    position:absolute;top:1rem;right:1rem;
+    background:none;border:none;color:var(--text-muted);
+    font-size:1.4rem;cursor:pointer;
+  }
+  #detail h2{
+    font-size:1.35rem;margin-bottom:.3rem;
+  }
+  #detail .detail-sub{
+    color:var(--text-muted);font-size:.85rem;margin-bottom:1.2rem;
+  }
+  #detail .detail-section{margin-bottom:1.2rem;}
+  #detail .detail-section h3{
+    font-size:.8rem;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--accent);
+    margin-bottom:.4rem;
+  }
+  #detail ul{
+    list-style:none;padding:0;
+  }
+  #detail ul li{
+    position:relative;
+    padding:.3rem 0 .3rem 1.1rem;
+    font-size:.88rem;
+    color:var(--text);
+  }
+  #detail ul li::before{
+    content:'';
+    position:absolute;left:0;top:.65rem;
+    width:6px;height:6px;border-radius:50%;
+    background:var(--accent);
+  }
+  #detail a{
+    color:var(--cyan);text-decoration:none;
+  }
+  #detail a:hover{text-decoration:underline;}
+  #detail .tag{
+    display:inline-block;
+    background:var(--surface-hover);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:2px 8px;
+    font-size:.75rem;
+    margin:2px;
+    color:var(--text-muted);
+  }
+
+  /* ---------- legend ---------- */
+  #legend{
+    max-width:1100px;
+    margin:0 auto 2rem;
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:.8rem;
+    padding:0 1rem;
+  }
+  .legend-item{
+    display:flex;align-items:center;gap:.4rem;
+    font-size:.78rem;color:var(--text-muted);
+  }
+  .legend-dot{
+    width:10px;height:10px;border-radius:50%;
+  }
+
+  /* ---------- data-flow arrows ---------- */
+  #flow-toggle{
+    display:block;
+    margin:0 auto 1rem;
+    background:var(--surface);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:.5rem 1.2rem;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:.85rem;
+    transition:border-color .2s;
+  }
+  #flow-toggle:hover{border-color:var(--accent);}
+  #flow-toggle.active{
+    border-color:var(--accent);
+    background:rgba(108,99,255,.12);
+  }
+
+  /* animated pulse on lines */
+  @keyframes dashMove{
+    to{stroke-dashoffset:-20;}
+  }
+  #lines line.flowing{
+    stroke:var(--cyan);
+    stroke-width:2.5;
+    stroke-dasharray:8 6;
+    animation:dashMove .8s linear infinite;
+  }
+
+  /* ---------- responsive ---------- */
+  @media(max-width:900px){
+    #canvas{height:auto;min-height:1100px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>CE-AGENTS</h1>
+  <p>Cardinal Element Agentic AI Monorepo — Interactive Architecture Diagram</p>
+</header>
+
+<button id="flow-toggle" onclick="toggleFlow()">Show Data Flow</button>
+
+<div id="canvas">
+  <svg id="lines" width="100%" height="100%"></svg>
+
+  <!-- Hub -->
+  <div class="node" id="hub" data-key="hub">
+    <div class="node-icon">&#x1F9E0;</div>
+    <div class="node-title">CE-AGENTS</div>
+    <div class="node-sub">Monorepo Hub</div>
+  </div>
+
+  <!-- Agent Builder -->
+  <div class="node" id="n-agent" data-key="agent">
+    <div class="node-icon">&#x1F468;&#x200D;&#x1F4BC;</div>
+    <div class="node-title">Agent Builder</div>
+    <div class="node-sub">ce-c-suite</div>
+    <div class="node-badge" style="background:rgba(16,185,129,.15);color:var(--green);">Upstream Repo</div>
+  </div>
+
+  <!-- Evals -->
+  <div class="node" id="n-evals" data-key="evals">
+    <div class="node-icon">&#x1F4CA;</div>
+    <div class="node-title">Evals</div>
+    <div class="node-sub">CE-Evals</div>
+    <div class="node-badge" style="background:rgba(16,185,129,.15);color:var(--green);">Upstream Repo</div>
+  </div>
+
+  <!-- Multi-Agent Orchestration -->
+  <div class="node" id="n-orch" data-key="orch">
+    <div class="node-icon">&#x1F310;</div>
+    <div class="node-title">Multi-Agent Orchestration</div>
+    <div class="node-sub">coordination-lab</div>
+    <div class="node-badge" style="background:rgba(16,185,129,.15);color:var(--green);">Upstream Repo</div>
+  </div>
+
+  <!-- Recursive Loops -->
+  <div class="node" id="n-loops" data-key="loops">
+    <div class="node-icon">&#x1F504;</div>
+    <div class="node-title">Recursive Loops</div>
+    <div class="node-sub">Self-improving patterns</div>
+    <div class="node-badge" style="background:rgba(245,158,11,.15);color:var(--amber);">Internal</div>
+  </div>
+
+  <!-- n8n Workflows -->
+  <div class="node" id="n-n8n" data-key="n8n">
+    <div class="node-icon">&#x2699;&#xFE0F;</div>
+    <div class="node-title">n8n Workflows</div>
+    <div class="node-sub">Production automation</div>
+    <div class="node-badge" style="background:rgba(249,115,22,.15);color:var(--orange);">Automation</div>
+  </div>
+
+  <!-- Scripts -->
+  <div class="node" id="n-scripts" data-key="scripts">
+    <div class="node-icon">&#x1F4DC;</div>
+    <div class="node-title">Scripts</div>
+    <div class="node-sub">Shared utilities</div>
+    <div class="node-badge" style="background:rgba(59,130,246,.15);color:var(--blue);">Tooling</div>
+  </div>
+
+  <!-- Shared -->
+  <div class="node" id="n-shared" data-key="shared">
+    <div class="node-icon">&#x1F4E6;</div>
+    <div class="node-title">Shared</div>
+    <div class="node-sub">Cross-project resources</div>
+    <div class="node-badge" style="background:rgba(236,72,153,.15);color:var(--pink);">Common</div>
+  </div>
+</div>
+
+<div id="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Has upstream repo</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>Internal module</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div>Automation</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div>Tooling</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--pink)"></div>Common resources</div>
+</div>
+
+<!-- Detail panel -->
+<div id="detail">
+  <button id="detail-close" onclick="closeDetail()">&times;</button>
+  <div id="detail-body"></div>
+</div>
+
+<script>
+/* ===== Node data ===== */
+const DATA = {
+  hub: {
+    title: 'CE-AGENTS Monorepo',
+    sub: 'Central coordination layer',
+    sections: [
+      { heading:'Purpose', items:[
+        'Centralized home for all Cardinal Element agentic AI work',
+        'Coordinates agent systems, orchestration, evals & automation',
+        'Federated architecture — subprojects keep their own upstream repos',
+      ]},
+      { heading:'Tech Stack', tags:['Python','MCP','Claude API','n8n','Firebase','Git'] },
+      { heading:'Repository', items:[
+        '<a href="https://github.com/skidubb/ce-agents" target="_blank">github.com/skidubb/ce-agents</a>',
+      ]},
+    ]
+  },
+  agent: {
+    title: 'Agent Builder',
+    sub: 'ce-c-suite — C-Suite multi-agent system',
+    sections: [
+      { heading:'What It Does', items:[
+        'Specialized AI agents for executive functions',
+        'Roles: CEO, CTO, CFO, and more C-Suite personas',
+        'MCP server integrations for tool use',
+        'Each agent has domain-specific knowledge & capabilities',
+      ]},
+      { heading:'Key Concepts', tags:['C-Suite Agents','MCP Servers','Role Specialization','Tool Integration'] },
+      { heading:'Relationships', items:[
+        'Evaluated by <strong>Evals</strong> for quality benchmarks',
+        'Coordinated via <strong>Multi-Agent Orchestration</strong> protocols',
+        'Deployed through <strong>n8n Workflows</strong> into production',
+      ]},
+      { heading:'Upstream', items:[
+        '<a href="https://github.com/skidubb/ce-c-suite" target="_blank">github.com/skidubb/ce-c-suite</a>',
+      ]},
+    ]
+  },
+  evals: {
+    title: 'Evals',
+    sub: 'CE-Evals — Evaluation framework',
+    sections: [
+      { heading:'What It Does', items:[
+        'Measures agent quality across defined rubrics',
+        'Provides evaluation protocols & benchmarking tools',
+        'Tracks performance regressions over time',
+        'Generates quality reports for agent iterations',
+      ]},
+      { heading:'Key Concepts', tags:['Rubrics','Protocols','Benchmarking','Quality Metrics','Regression Testing'] },
+      { heading:'Relationships', items:[
+        'Evaluates outputs from <strong>Agent Builder</strong>',
+        'Validates improvements from <strong>Recursive Loops</strong>',
+        'Measures coordination quality of <strong>Orchestration</strong>',
+      ]},
+      { heading:'Upstream', items:[
+        '<a href="https://github.com/skidubb/CE-Evals" target="_blank">github.com/skidubb/CE-Evals</a>',
+      ]},
+    ]
+  },
+  orch: {
+    title: 'Multi-Agent Orchestration',
+    sub: 'coordination-lab — Coordination protocols & research',
+    sections: [
+      { heading:'What It Does', items:[
+        'Research & protocols for multi-agent coordination',
+        'Communication patterns between agents',
+        'Delegation strategies & task distribution',
+        'Team topologies for agent groups',
+      ]},
+      { heading:'Key Concepts', tags:['Communication Patterns','Delegation','Team Topologies','Consensus','Task Routing'] },
+      { heading:'Relationships', items:[
+        'Orchestrates agents from <strong>Agent Builder</strong>',
+        'Uses <strong>Recursive Loops</strong> for iterative refinement',
+        'Quality measured by <strong>Evals</strong>',
+      ]},
+      { heading:'Upstream', items:[
+        '<a href="https://github.com/skidubb/coordination-lab" target="_blank">github.com/skidubb/coordination-lab</a>',
+      ]},
+    ]
+  },
+  loops: {
+    title: 'Recursive Loops',
+    sub: 'Self-improving agent execution patterns',
+    sections: [
+      { heading:'What It Does', items:[
+        'Patterns for recursive agent execution',
+        'Self-improving loops that refine outputs iteratively',
+        'Convergence strategies — knowing when to stop',
+        'Iterative refinement until quality thresholds are met',
+      ]},
+      { heading:'Key Concepts', tags:['Recursion','Self-Improvement','Convergence','Iterative Refinement','Feedback Loops'] },
+      { heading:'Relationships', items:[
+        'Refines outputs from <strong>Agent Builder</strong>',
+        'Uses <strong>Evals</strong> to measure convergence',
+        'Feeds improved patterns back to <strong>Orchestration</strong>',
+      ]},
+    ]
+  },
+  n8n: {
+    title: 'n8n Workflows',
+    sub: 'Production automation workflows',
+    sections: [
+      { heading:'What It Does', items:[
+        'Production automation workflows running on n8n',
+        'Integrates agents into real business processes',
+        'Bridges AI agent outputs with external systems',
+        'Handles scheduling, triggers, and data pipelines',
+      ]},
+      { heading:'Key Concepts', tags:['n8n','Workflow Automation','Triggers','Business Processes','Data Pipelines'] },
+      { heading:'Relationships', items:[
+        'Deploys <strong>Agent Builder</strong> agents into production',
+        'Uses <strong>Shared</strong> resources for configuration',
+        'Leverages <strong>Scripts</strong> for custom workflow steps',
+      ]},
+    ]
+  },
+  scripts: {
+    title: 'Scripts',
+    sub: 'Shared utility scripts',
+    sections: [
+      { heading:'What It Does', items:[
+        'Shared utility scripts used across projects',
+        'Common automation helpers',
+        'Development tooling and CLI utilities',
+        'Build and deployment scripts',
+      ]},
+      { heading:'Relationships', items:[
+        'Used by <strong>n8n Workflows</strong> for custom steps',
+        'Supports <strong>Agent Builder</strong> development workflow',
+        'Draws from <strong>Shared</strong> resources',
+      ]},
+    ]
+  },
+  shared: {
+    title: 'Shared',
+    sub: 'Cross-project shared resources',
+    sections: [
+      { heading:'What It Does', items:[
+        'Cross-project shared resources & configuration',
+        'Common type definitions and interfaces',
+        'Shared prompt templates & system prompts',
+        'Environment configuration templates',
+      ]},
+      { heading:'Relationships', items:[
+        'Consumed by all other subprojects',
+        'Central point for shared configuration',
+        'Prevents duplication across the monorepo',
+      ]},
+    ]
+  },
+};
+
+/* ===== Edges (hub → each child) ===== */
+const EDGES = [
+  {from:'hub', to:'n-agent'},
+  {from:'hub', to:'n-evals'},
+  {from:'hub', to:'n-orch'},
+  {from:'hub', to:'n-loops'},
+  {from:'hub', to:'n-n8n'},
+  {from:'hub', to:'n-scripts'},
+  {from:'hub', to:'n-shared'},
+];
+
+/* ===== Data-flow edges (between children) ===== */
+const FLOW_EDGES = [
+  {from:'n-agent', to:'n-evals',  label:'evaluates'},
+  {from:'n-agent', to:'n-orch',   label:'orchestrates'},
+  {from:'n-loops', to:'n-evals',  label:'measures convergence'},
+  {from:'n-orch',  to:'n-loops',  label:'iterative refinement'},
+  {from:'n-agent', to:'n-n8n',    label:'deploys'},
+  {from:'n-n8n',   to:'n-scripts',label:'uses'},
+  {from:'n-shared',to:'n-agent',  label:'config'},
+  {from:'n-shared',to:'n-n8n',    label:'config'},
+];
+
+/* ===== Layout positions (responsive-friendly fractions) ===== */
+function layout(){
+  const c = document.getElementById('canvas');
+  const W = c.offsetWidth, H = c.offsetHeight;
+
+  const positions = {
+    hub:       {x:.5,  y:.5},
+    'n-agent': {x:.15, y:.18},
+    'n-evals': {x:.5,  y:.1},
+    'n-orch':  {x:.85, y:.18},
+    'n-loops': {x:.88, y:.55},
+    'n-n8n':   {x:.75, y:.85},
+    'n-scripts':{x:.35, y:.88},
+    'n-shared': {x:.1,  y:.6},
+  };
+
+  Object.entries(positions).forEach(([id,pos])=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    const ew = el.offsetWidth, eh = el.offsetHeight;
+    el.style.left = (pos.x * W - ew/2) + 'px';
+    el.style.top  = (pos.y * H - eh/2) + 'px';
+  });
+
+  drawLines();
+}
+
+/* ===== Draw SVG lines ===== */
+let flowVisible = false;
+
+function center(id){
+  const el = document.getElementById(id);
+  return {
+    x: el.offsetLeft + el.offsetWidth/2,
+    y: el.offsetTop  + el.offsetHeight/2,
+  };
+}
+
+function drawLines(){
+  const svg = document.getElementById('lines');
+  svg.innerHTML = '';
+
+  EDGES.forEach(e=>{
+    const a = center(e.from), b = center(e.to);
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',a.x); line.setAttribute('y1',a.y);
+    line.setAttribute('x2',b.x); line.setAttribute('y2',b.y);
+    line.dataset.from = e.from; line.dataset.to = e.to;
+    svg.appendChild(line);
+  });
+
+  if(flowVisible){
+    FLOW_EDGES.forEach(e=>{
+      const a = center(e.from), b = center(e.to);
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1',a.x); line.setAttribute('y1',a.y);
+      line.setAttribute('x2',b.x); line.setAttribute('y2',b.y);
+      line.classList.add('flowing');
+      svg.appendChild(line);
+    });
+  }
+}
+
+/* ===== Interaction ===== */
+let activeKey = null;
+
+document.querySelectorAll('.node').forEach(node=>{
+  node.addEventListener('click',()=>{
+    const key = node.dataset.key;
+    if(activeKey === key){ closeDetail(); return; }
+    openDetail(key, node.id);
+  });
+});
+
+function openDetail(key, nodeId){
+  // clear previous
+  document.querySelectorAll('.node.expanded').forEach(n=>n.classList.remove('expanded'));
+  document.querySelectorAll('#lines line.active').forEach(l=>l.classList.remove('active'));
+
+  activeKey = key;
+  const node = document.getElementById(nodeId);
+  node.classList.add('expanded');
+
+  // highlight connected lines
+  document.querySelectorAll('#lines line').forEach(l=>{
+    if(l.dataset.from === nodeId || l.dataset.to === nodeId ||
+       l.dataset.from === 'hub' && l.dataset.to === nodeId ||
+       l.dataset.to === 'hub' && l.dataset.from === nodeId){
+      l.classList.add('active');
+    }
+  });
+
+  // build detail panel
+  const d = DATA[key];
+  let html = `<h2>${d.title}</h2><div class="detail-sub">${d.sub}</div>`;
+  d.sections.forEach(s=>{
+    html += `<div class="detail-section"><h3>${s.heading}</h3>`;
+    if(s.tags){
+      html += s.tags.map(t=>`<span class="tag">${t}</span>`).join('');
+    } else if(s.items){
+      html += '<ul>' + s.items.map(i=>`<li>${i}</li>`).join('') + '</ul>';
+    }
+    html += '</div>';
+  });
+  document.getElementById('detail-body').innerHTML = html;
+  document.getElementById('detail').classList.add('open');
+}
+
+function closeDetail(){
+  activeKey = null;
+  document.getElementById('detail').classList.remove('open');
+  document.querySelectorAll('.node.expanded').forEach(n=>n.classList.remove('expanded'));
+  document.querySelectorAll('#lines line.active').forEach(l=>l.classList.remove('active'));
+}
+
+function toggleFlow(){
+  flowVisible = !flowVisible;
+  document.getElementById('flow-toggle').classList.toggle('active', flowVisible);
+  document.getElementById('flow-toggle').textContent = flowVisible ? 'Hide Data Flow' : 'Show Data Flow';
+  drawLines();
+}
+
+/* ===== Resize ===== */
+window.addEventListener('resize', layout);
+window.addEventListener('load', layout);
+
+/* close detail on Escape */
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeDetail(); });
+</script>
+</body>
+</html>
